@@ -1,0 +1,109 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 244 63 94;
+  --color-secondary: 236 72 153;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply text-gray-900 dark:text-white;
+    background-color: #fdf1ee;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+
+  /* Force all page wrappers to be transparent so the global background shows through */
+  #root > div.min-h-screen {
+    background: transparent !important;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    @apply box-border;
+  }
+
+  ::selection {
+    @apply bg-rose-500/30 text-rose-900 dark:bg-rose-400/30 dark:text-rose-100;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-3;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-600 rounded-full hover:bg-gray-400 dark:hover:bg-gray-500 transition-colors;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply backdrop-blur-xl bg-white/70 dark:bg-gray-900/70 border border-white/20 dark:border-gray-700/50;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-rose-500 to-pink-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-border {
+    @apply relative before:absolute before:inset-0 before:p-[1px] before:rounded-inherit before:bg-gradient-to-r before:from-rose-400 before:to-pink-500 before:-z-10;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(244, 63, 94, 0.3); }
+    50% { box-shadow: 0 0 40px rgba(244, 63, 94, 0.5); }
+  }
+
+  .bg-gradient-radial {
+    background: radial-gradient(ellipse at center, var(--tw-gradient-stops));
+  }
+
+  .border-3 {
+    border-width: 3px;
+  }
+
+  .rounded-inherit {
+    border-radius: inherit;
+  }
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  @apply cursor-pointer;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  @apply cursor-pointer;
+}
