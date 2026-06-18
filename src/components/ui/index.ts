@@ -1,6 +1,7 @@
 export { GlassCard, GlassCardOverlay } from './GlassCard';
 export { Button } from './Button';
 export { Modal } from './Modal';
+export { LogoutModal } from './LogoutModal';
 export { Input } from './Input';
 export { Badge } from './Badge';
 export { Rating } from './Rating';

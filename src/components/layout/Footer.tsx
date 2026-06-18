@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Sparkles, Instagram, Twitter, Facebook, Youtube, Mail, Phone, MapPin, Heart, ExternalLink } from 'lucide-react';
+import { Sparkles, Instagram, Facebook, Linkedin, Mail, Phone, MapPin, Heart, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const footerLinks = {
@@ -63,16 +63,35 @@ export function Footer() {
               Chennai's AI-powered beauty marketplace. Discover the best salons and personalized beauty recommendations.
             </p>
             <div className="flex gap-4 mb-4">
-              {[Instagram, Twitter, Facebook, Youtube].map((Icon, i) => (
+              {[
+                { Icon: Instagram, href: 'https://instagram.com/glowai', label: 'Instagram' },
+                { Icon: Facebook, href: 'https://facebook.com/glowai', label: 'Facebook' },
+                { Icon: Linkedin, href: 'https://linkedin.com/company/glowai', label: 'LinkedIn' },
+              ].map(({ Icon, href, label }) => (
                 <motion.a
-                  key={i}
-                  href="#"
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   whileHover={{ scale: 1.1, y: -2 }}
                   className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-500 transition-colors"
+                  title={label}
                 >
                   <Icon className="w-4 h-4" />
                 </motion.a>
               ))}
+              <motion.a
+                href="https://x.com/glowai"
+                target="_blank"
+                rel="noopener noreferrer"
+                whileHover={{ scale: 1.1, y: -2 }}
+                className="p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-rose-100 dark:hover:bg-rose-950/50 hover:text-rose-500 transition-colors"
+                title="X (Twitter)"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </motion.a>
             </div>
           </div>
 
@@ -130,7 +149,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Mail className="w-4 h-4" />
-                hello@glowai Chennai.com
+                hello@glowai.com
               </li>
               <li className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                 <Phone className="w-4 h-4" />

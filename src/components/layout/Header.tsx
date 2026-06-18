@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 import { useApp } from '../../context/AppContext';
 import { Button } from '../ui/Button';
+import { LogoutModal } from '../ui/LogoutModal';
 
 const navItems = [
   { label: 'Discover', path: '/discover' },
@@ -31,6 +32,7 @@ const navItems = [
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { theme, toggleTheme } = useTheme();
   const { user, setUser } = useApp();
@@ -145,7 +147,7 @@ export function Header() {
                     </Button>
                   </Link>
                   <button
-                    onClick={handleLogout}
+                    onClick={() => setShowLogoutModal(true)}
                     className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
                     <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-300" />
@@ -227,7 +229,7 @@ export function Header() {
                       </div>
                     </Link>
                     <button
-                      onClick={handleLogout}
+                      onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }}
                       className="px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-left text-sm font-medium text-gray-600 dark:text-gray-300"
                     >
                       <div className="flex items-center gap-2">
@@ -251,6 +253,14 @@ export function Header() {
           )}
         </nav>
       </div>
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onLogout={() => {
+          setShowLogoutModal(false);
+          handleLogout();
+        }}
+      />
     </motion.header>
   );
 }

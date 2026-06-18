@@ -24,6 +24,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Button, GlassCard, Badge, Rating, CircularProgress, Progress } from '../components/ui';
+import { LogoutModal } from '../components/ui/LogoutModal';
 import { api } from '../lib/api';
 import { useApp } from '../context/AppContext';
 import type { Booking, Salon, Service, Review } from '../types';
@@ -49,6 +50,7 @@ export function DashboardPage() {
   const [savedSalons, setSavedSalons] = useState<Salon[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [glowScore, setGlowScore] = useState<GlowScoreData>({
     overall: 72,
     hair: 75,
@@ -60,42 +62,25 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      const demoUser = {
-        id: 'demo-user',
-        email: 'demo@glowai.com',
-        name: 'Demo User',
-        phone: '+91 98765 43210',
-        role: 'customer' as const,
-        glow_score: 72,
-        hair_score: 75,
-        skin_score: 68,
-        confidence_score: 70,
-        confidence_score: 70,
-        beauty_concerns: [],
-        preferred_styles: [],
-        skin_type: 'Oily',
-        hair_type: 'Wavy',
-        is_student: false,
-        location: 'Chennai, TN',
-        college: '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      setUser(demoUser);
+      navigate('/login');
     } else {
       loadDashboardData();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   useEffect(() => {
     if (user) {
+      // Generate a consistent, realistic score based on user details so it doesn't jump randomly
+      // but also doesn't rely on empty DB fields.
+      const seed = (user.email?.length || 10) + (user.name?.length || 5);
+      
       setGlowScore({
-        overall: user.glow_score || 72,
-        hair: user.hair_score || 75,
-        skin: user.skin_score || 68,
-        confidence: user.confidence_score || 70,
-        trend: Math.random() > 0.5 ? 'up' : Math.random() > 0.5 ? 'down' : 'stable',
-        trendValue: Math.floor(Math.random() * 10) + 1,
+        overall: Math.min(96, 65 + seed),
+        hair: Math.min(94, 68 + seed),
+        skin: Math.min(92, 60 + seed),
+        confidence: Math.min(98, 70 + (seed % 10)),
+        trend: seed % 2 === 0 ? 'up' : 'stable',
+        trendValue: (seed % 5) + 1,
       });
     }
   }, [user]);
@@ -123,6 +108,29 @@ export function DashboardPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'beauty_preferences', label: 'Beauty Settings', icon: Sparkles },
   ];
+
+  const getAIRecommendation = () => {
+    if (!user) return "Analyzing your beauty profile...";
+    
+    let recommendation = "";
+    
+    if (glowScore.skin < glowScore.hair) {
+      recommendation += "Based on your scores, we recommend focusing on skincare routines this month. ";
+    } else if (glowScore.hair < glowScore.skin) {
+      recommendation += "Your skin is glowing! Let's give some extra care to your hair this month. ";
+    } else {
+      recommendation += "Your hair and skin scores are perfectly balanced! Keep up the great routine. ";
+    }
+    
+    if (user.beauty_concerns && user.beauty_concerns.length > 0) {
+      const topConcern = user.beauty_concerns[0];
+      recommendation += `We noticed your concern about ${topConcern.toLowerCase()}. Consider booking a specialized treatment to address this!`;
+    } else {
+      recommendation += "Consider trying a relaxing spa session to boost your confidence even more!";
+    }
+    
+    return recommendation;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -265,18 +273,17 @@ export function DashboardPage() {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Based on your scores, we recommend focusing on skincare routines this month.
-                        Your hair is looking great! Consider a hydrating facial treatment.
+                        {getAIRecommendation()}
                       </p>
                     </div>
                   </GlassCard>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { label: 'Total Bookings', value: '12', icon: Calendar, change: '+3 this month' },
-                      { label: 'Saved Salons', value: '8', icon: Heart, change: '2 women-owned' },
-                      { label: 'Money Saved', value: '₹4,500', icon: DollarSign, change: 'via student deals' },
-                      { label: 'AI Recommendations', value: '15', icon: TrendingUp, change: '5 accepted' },
+                      { label: 'Total Bookings', value: bookings.length.toString(), icon: Calendar, change: 'Lifetime' },
+                      { label: 'Saved Salons', value: '0', icon: Heart, change: 'Coming soon' },
+                      { label: 'Total Spent', value: `₹${bookings.reduce((sum, b) => sum + (b.total_price || 0), 0).toLocaleString()}`, icon: DollarSign, change: 'Across all bookings' },
+                      { label: 'Beauty Concerns', value: (user?.beauty_concerns?.length || 0).toString(), icon: TrendingUp, change: 'Tracked' },
                     ].map((stat, i) => (
                       <motion.div
                         key={i}
@@ -519,10 +526,7 @@ export function DashboardPage() {
                         variant="outline"
                         size="sm"
                         icon={<LogOut className="w-4 h-4" />}
-                        onClick={() => {
-                          setUser(null);
-                          navigate('/');
-                        }}
+                        onClick={() => setShowLogoutModal(true)}
                       >
                         Logout
                       </Button>
@@ -742,6 +746,19 @@ export function DashboardPage() {
       </section>
 
       <Footer />
+
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onLogout={() => {
+          setShowLogoutModal(false);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          sessionStorage.clear();
+          setUser(null);
+          navigate('/');
+        }}
+      />
     </div>
   );
 }

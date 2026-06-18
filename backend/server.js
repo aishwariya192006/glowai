@@ -10,6 +10,7 @@ import reviewRoutes from './routes/reviews.js';
 import bookingRoutes from './routes/bookings.js';
 import userRoutes from './routes/users.js';
 import authRoutes from './routes/auth.js';
+import contactRoutes from './routes/contact.js';
 import passport from './config/passport.js';
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

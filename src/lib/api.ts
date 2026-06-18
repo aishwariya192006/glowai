@@ -69,4 +69,7 @@ export const api = {
 
   signup: (data: { email: string; password: string; name: string; phone?: string; is_student?: boolean }) =>
     request<User>('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+
+  submitContact: (data: { full_name: string; email: string; subject: string; message: string }) =>
+    request<{ success: boolean; message: string }>('/contact', { method: 'POST', body: JSON.stringify(data) }),
 };
