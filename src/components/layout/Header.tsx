@@ -141,11 +141,19 @@ export function Header() {
 
               {user ? (
                 <div className="hidden md:flex items-center gap-3">
-                  <Link to="/dashboard">
-                    <Button variant="ghost" size="sm" icon={<LayoutDashboard className="w-4 h-4" />}>
-                      Dashboard
-                    </Button>
-                  </Link>
+                  {user.role === 'admin' ? (
+                    <Link to="/admin">
+                      <Button variant="ghost" size="sm" icon={<Users className="w-4 h-4" />}>
+                        Admin Dashboard
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link to="/dashboard">
+                      <Button variant="ghost" size="sm" icon={<LayoutDashboard className="w-4 h-4" />}>
+                        Dashboard
+                      </Button>
+                    </Link>
+                  )}
                   <button
                     onClick={() => setShowLogoutModal(true)}
                     className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -222,12 +230,21 @@ export function Header() {
                 ))}
                 {user ? (
                   <>
-                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-medium text-gray-600 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <LayoutDashboard className="w-4 h-4" />
-                        Dashboard
-                      </div>
-                    </Link>
+                    {user.role === 'admin' ? (
+                      <Link to="/admin" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-medium text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Admin Dashboard
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-sm font-medium text-gray-600 dark:text-gray-300">
+                        <div className="flex items-center gap-2">
+                          <LayoutDashboard className="w-4 h-4" />
+                          Dashboard
+                        </div>
+                      </Link>
+                    )}
                     <button
                       onClick={() => { setIsMobileMenuOpen(false); setShowLogoutModal(true); }}
                       className="px-4 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-left text-sm font-medium text-gray-600 dark:text-gray-300"

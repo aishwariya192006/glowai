@@ -23,7 +23,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
-import { Button, GlassCard, Badge, Rating, CircularProgress, Progress } from '../components/ui';
+import { Button, GlassCard, Badge, Progress } from '../components/ui';
 import { LogoutModal } from '../components/ui/LogoutModal';
 import { api } from '../lib/api';
 import { useApp } from '../context/AppContext';
@@ -59,6 +59,10 @@ export function DashboardPage() {
     trend: 'up',
     trendValue: 5,
   });
+  const [aiRecommendation, setAiRecommendation] = useState<string>("Analyzing your beauty profile with AI...");
+  const [matchPercentage, setMatchPercentage] = useState<number | null>(null);
+  const [recommendedServices, setRecommendedServices] = useState<string[]>([]);
+  const [featuredSalons, setFeaturedSalons] = useState<Salon[]>([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -70,18 +74,44 @@ export function DashboardPage() {
 
   useEffect(() => {
     if (user) {
-      // Generate a consistent, realistic score based on user details so it doesn't jump randomly
-      // but also doesn't rely on empty DB fields.
-      const seed = (user.email?.length || 10) + (user.name?.length || 5);
-      
+      // Use actual scores from the database (fallback to defaults if a field is missing)
       setGlowScore({
-        overall: Math.min(96, 65 + seed),
-        hair: Math.min(94, 68 + seed),
-        skin: Math.min(92, 60 + seed),
-        confidence: Math.min(98, 70 + (seed % 10)),
-        trend: seed % 2 === 0 ? 'up' : 'stable',
-        trendValue: (seed % 5) + 1,
+        overall: user.glow_score || 83,
+        hair: user.hair_score || 75,
+        skin: user.skin_score || 68,
+        confidence: user.confidence_score || 70,
+        trend: 'up',
+        trendValue: 4,
       });
+
+      // Fetch AI Recommendation from Python Machine Learning API
+      const fetchRecommendation = async () => {
+        try {
+          const res = await fetch('http://localhost:5000/api/recommend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              age: 25, // Fallback if not in DB
+              gender: 'Female',
+              skinType: user.beauty_concerns?.includes('Acne') ? 'Oily' : 'Normal',
+              hairType: 'Straight',
+              budget: 1500,
+              concern: user.beauty_concerns?.[0] || 'Acne'
+            }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            setAiRecommendation(`Based on your profile, we highly recommend focusing on ${data.primaryService}.`);
+            setMatchPercentage(data.matchPercentage);
+            setRecommendedServices(data.recommendedServices);
+          }
+        } catch (error) {
+          console.error("Failed to fetch AI recommendation:", error);
+          setAiRecommendation("Our AI model is currently offline. Please try again later.");
+        }
+      };
+
+      fetchRecommendation();
     }
   }, [user]);
 
@@ -94,6 +124,10 @@ export function DashboardPage() {
         limit: 10,
       });
       setBookings(bookingsData);
+
+      // Fetch featured salons from Supabase instead of hardcoded banner
+      const salonsData = await api.getSalons({ limit: 3 });
+      setFeaturedSalons(salonsData);
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
     } finally {
@@ -108,29 +142,6 @@ export function DashboardPage() {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'beauty_preferences', label: 'Beauty Settings', icon: Sparkles },
   ];
-
-  const getAIRecommendation = () => {
-    if (!user) return "Analyzing your beauty profile...";
-    
-    let recommendation = "";
-    
-    if (glowScore.skin < glowScore.hair) {
-      recommendation += "Based on your scores, we recommend focusing on skincare routines this month. ";
-    } else if (glowScore.hair < glowScore.skin) {
-      recommendation += "Your skin is glowing! Let's give some extra care to your hair this month. ";
-    } else {
-      recommendation += "Your hair and skin scores are perfectly balanced! Keep up the great routine. ";
-    }
-    
-    if (user.beauty_concerns && user.beauty_concerns.length > 0) {
-      const topConcern = user.beauty_concerns[0];
-      recommendation += `We noticed your concern about ${topConcern.toLowerCase()}. Consider booking a specialized treatment to address this!`;
-    } else {
-      recommendation += "Consider trying a relaxing spa session to boost your confidence even more!";
-    }
-    
-    return recommendation;
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -200,81 +211,70 @@ export function DashboardPage() {
                     </div>
                   </div>
 
+                  {/* Featured Salons replacing the hardcoded banner */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    {featuredSalons.map((salon, index) => (
+                      <Link to={`/salon/${salon.id}`} key={salon.id}>
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="group rounded-[2rem] overflow-hidden bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+                        >
+                          <div className="relative h-48 overflow-hidden">
+                            <img 
+                              src={salon.gallery_urls?.[0] || salon.logo_url || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&q=80'} 
+                              alt={salon.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 text-sm font-bold text-gray-900">
+                              <Star className="w-4 h-4 text-amber-400 fill-current" />
+                              {salon.rating}
+                            </div>
+                          </div>
+                          <div className="p-5">
+                            <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-1 truncate">{salon.name}</h3>
+                            <p className="text-gray-500 dark:text-gray-400 text-sm flex items-center gap-1 mb-4 truncate">
+                              <MapPin className="w-4 h-4" /> {salon.address}, {salon.city}
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant="primary">{salon.price_range || 'Moderate'}</Badge>
+                              <span className="text-rose-500 font-medium text-sm group-hover:underline">View Details →</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      </Link>
+                    ))}
+                  </div>
+                  
                   <GlassCard className="p-6">
-                    <div className="flex flex-col md:flex-row items-center gap-8">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
-                          Your Glow Score
-                        </p>
-                        <div className="relative">
-                          <CircularProgress
-                            value={glowScore.overall}
-                            size="lg"
-                            label="Score"
-                            variant="primary"
-                          />
-                          <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-1">
-                            {glowScore.trend === 'up' && (
-                              <span className="text-emerald-500 text-xs flex items-center">
-                                <ArrowUp className="w-3 h-3" /> +{glowScore.trendValue}%
-                              </span>
-                            )}
-                            {glowScore.trend === 'down' && (
-                              <span className="text-red-500 text-xs flex items-center">
-                                <ArrowDown className="w-3 h-3" /> -{glowScore.trendValue}%
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Hair Score
-                            </span>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {glowScore.hair}%
-                            </span>
-                          </div>
-                          <Progress value={glowScore.hair} variant="success" />
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30">
+                      <div className="flex items-center justify-between gap-2 mb-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-rose-500" />
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            AI Beauty Advisor
+                          </span>
                         </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Skin Score
-                            </span>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {glowScore.skin}%
-                            </span>
-                          </div>
-                          <Progress value={glowScore.skin} variant="warning" />
-                        </div>
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Confidence Score
-                            </span>
-                            <span className="text-sm font-bold text-gray-900 dark:text-white">
-                              {glowScore.confidence}%
-                            </span>
-                          </div>
-                          <Progress value={glowScore.confidence} variant="success" />
-                        </div>
+                        {matchPercentage && (
+                          <span className="px-2 py-1 bg-rose-500 text-white text-xs font-bold rounded-full">
+                            {matchPercentage}% Match
+                          </span>
+                        )}
                       </div>
-                    </div>
-
-                    <div className="mt-6 p-4 rounded-xl bg-gradient-to-r from-rose-50 to-pink-50 dark:from-rose-950/30 dark:to-pink-950/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-5 h-5 text-rose-500" />
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          AI Beauty Advisor
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {getAIRecommendation()}
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        {aiRecommendation}
                       </p>
+                      {recommendedServices.length > 0 && (
+                        <div className="flex flex-wrap gap-2">
+                          {recommendedServices.map((service, i) => (
+                            <span key={i} className="px-3 py-1 bg-white dark:bg-gray-800 text-rose-600 dark:text-rose-400 text-xs font-medium rounded-full border border-rose-200 dark:border-rose-900/50 shadow-sm">
+                              {service}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </GlassCard>
 

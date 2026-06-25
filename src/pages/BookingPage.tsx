@@ -97,15 +97,8 @@ export function BookingPage() {
       let userId = user?.id;
 
       if (!user) {
-        const insertedUser = await api.upsertUser({
-          email: guestEmail,
-          name: guestName,
-          phone: guestPhone,
-          role: 'customer',
-          glow_score: Math.floor(Math.random() * 30) + 60,
-        });
-        userId = insertedUser.id;
-        setUser(insertedUser);
+        console.error('User must be logged in to book');
+        return;
       }
 
       for (const serviceId of selectedServices) {
@@ -166,7 +159,7 @@ export function BookingPage() {
       </div>
 
       <div className="relative pt-24 pb-8">
-        <div className="max-w-3xl mx-auto px-4">
+        <div className="max-w-5xl mx-auto px-4">
           <button
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-rose-500 transition-colors mb-6"
@@ -175,7 +168,7 @@ export function BookingPage() {
             Back
           </button>
 
-          <div className="flex items-center gap-2 mb-6">
+          <div className="flex items-center gap-2 mb-6 max-w-3xl">
             {[1, 2, 3, 4].map((s) => (
               <div
                 key={s}
@@ -187,17 +180,32 @@ export function BookingPage() {
           </div>
 
           <GlassCard className="p-6 mb-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+              <div className="w-[120px] h-[120px] rounded-3xl overflow-hidden shadow-lg bg-gray-100 shrink-0 border-4 border-white dark:border-gray-800">
                 <img
-                  src={salon.gallery_urls[0] || ''}
+                  src={salon.gallery_urls?.[0] || 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg'}
                   alt={salon.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => { e.currentTarget.src = 'https://images.pexels.com/photos/3993449/pexels-photo-3993449.jpeg'; }}
                 />
               </div>
-              <div>
-                <h2 className="font-bold text-gray-900 dark:text-white">{salon.name}</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400">{salon.area}</p>
+              <div className="flex-1">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{salon.name}</h1>
+                    <p className="text-gray-500 dark:text-gray-400 flex items-center gap-2 mb-3">
+                      {salon.area}, {salon.city}
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="warning" className="flex items-center gap-1">
+                        ★ {salon.rating || '4.5'}
+                      </Badge>
+                      <Badge variant="primary" className="flex items-center gap-1">
+                        {services.length} Services Available
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </GlassCard>
@@ -207,74 +215,125 @@ export function BookingPage() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col lg:flex-row gap-6"
             >
-              <GlassCard className="p-6">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-rose-500" />
-                  Select Services
-                </h2>
+              <div className="flex-1">
+                <GlassCard className="p-6">
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-rose-500" />
+                    Select Services
+                  </h2>
 
-                <div className="space-y-3">
-                  {services.map((service) => (
-                    <motion.button
-                      key={service.id}
-                      onClick={() => {
-                        setSelectedServices((prev) =>
-                          prev.includes(service.id)
-                            ? prev.filter((id) => id !== service.id)
-                            : [...prev, service.id]
-                        );
-                      }}
-                      className={`w-full flex items-center justify-between p-4 rounded-xl transition-all ${
-                        selectedServices.includes(service.id)
-                          ? 'bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-500'
-                          : 'bg-gray-50 dark:bg-gray-800/50 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {service.name}
-                          {service.duration_minutes < 60 && (
-                            <Badge variant="success" className="ml-2">Quick Service</Badge>
+                  {services.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500">No services available for this salon.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {services.map((service) => (
+                        <motion.button
+                          key={service.id}
+                          onClick={() => {
+                            setSelectedServices((prev) =>
+                              prev.includes(service.id)
+                                ? prev.filter((id) => id !== service.id)
+                                : [...prev, service.id]
+                            );
+                          }}
+                          className={`w-full flex flex-col p-5 rounded-2xl transition-all text-left relative overflow-hidden ${
+                            selectedServices.includes(service.id)
+                              ? 'bg-rose-50 dark:bg-rose-950/30 border-2 border-rose-500 shadow-lg shadow-rose-500/20'
+                              : 'bg-white/60 dark:bg-gray-800/60 border-2 border-transparent hover:bg-white dark:hover:bg-gray-800 hover:shadow-md'
+                          }`}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedServices.includes(service.id) && (
+                            <div className="absolute top-4 right-4 text-rose-500 bg-rose-100 dark:bg-rose-900/50 rounded-full p-1">
+                              <Check className="w-4 h-4" />
+                            </div>
                           )}
-                          {service.is_student_deal && (
-                            <Badge variant="warning" className="ml-2">Student Deal</Badge>
-                          )}
+                          <div className="pr-10">
+                            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
+                              {service.name}
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">
+                              {service.description || 'Premium salon service.'}
+                            </p>
+                          </div>
+                          <div className="mt-auto flex items-center justify-between w-full pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {service.duration_minutes} mins
+                            </p>
+                            <div className="text-right">
+                              <p className="font-bold text-gray-900 dark:text-white text-lg">
+                                ₹{service.price.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </motion.button>
+                      ))}
+                    </div>
+                  )}
+                </GlassCard>
+              </div>
+
+              <div className="lg:w-80 flex-shrink-0">
+                <div className="sticky top-24">
+                  <GlassCard className="p-6">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-4 border-b border-gray-200 dark:border-gray-700 pb-4">
+                      Booking Summary
+                    </h3>
+                    
+                    {selectedServices.length === 0 ? (
+                      <div className="text-center py-8">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Sparkles className="w-6 h-6 text-gray-400" />
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {service.duration_minutes} mins
-                        </p>
+                        <p className="text-sm text-gray-500">Select services to continue</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-900 dark:text-white">
-                          ₹{service.price.toLocaleString()}
-                        </p>
-                        {service.original_price && (
-                          <p className="text-sm text-gray-400 line-through">
-                            ₹{service.original_price.toLocaleString()}
-                          </p>
-                        )}
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="max-h-60 overflow-y-auto pr-2 space-y-3">
+                          {selectedServices.map(id => {
+                            const service = services.find(s => s.id === id);
+                            if (!service) return null;
+                            return (
+                              <div key={id} className="flex justify-between items-start text-sm">
+                                <div className="flex-1 pr-4">
+                                  <p className="font-medium text-gray-900 dark:text-white">{service.name}</p>
+                                  <p className="text-gray-500">{service.duration_minutes} mins</p>
+                                </div>
+                                <p className="font-semibold">₹{service.price}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
+                          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+                            <span>Total Duration</span>
+                            <span>{getTotalDuration()} mins</span>
+                          </div>
+                          <div className="flex justify-between text-lg font-bold text-gray-900 dark:text-white">
+                            <span>Total Price</span>
+                            <span className="text-rose-500">₹{getTotalPrice().toLocaleString()}</span>
+                          </div>
+                        </div>
                       </div>
-                    </motion.button>
-                  ))}
-                </div>
-              </GlassCard>
+                    )}
 
-              <div className="mt-6 flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Total</p>
-                  <p className="text-2xl font-bold text-rose-500">₹{getTotalPrice().toLocaleString()}</p>
-                  <p className="text-xs text-gray-400">Duration: {getTotalDuration()} mins</p>
+                    <Button
+                      variant="primary"
+                      className={`w-full mt-6 ${selectedServices.length > 0 ? 'hover:-translate-y-1 transition-transform' : ''}`}
+                      disabled={selectedServices.length === 0}
+                      onClick={() => setStep(2)}
+                    >
+                      Continue
+                    </Button>
+                  </GlassCard>
                 </div>
-                <Button
-                  variant="primary"
-                  disabled={selectedServices.length === 0}
-                  onClick={() => setStep(2)}
-                >
-                  Continue
-                </Button>
               </div>
             </motion.div>
           )}
@@ -442,15 +501,23 @@ export function BookingPage() {
                 <Button variant="ghost" onClick={() => setStep(2)}>
                   Back
                 </Button>
-                <Button
-                  variant="primary"
-                  disabled={!guestName || !guestPhone || !guestEmail}
-                  loading={isSubmitting}
-                  onClick={handleBooking}
-                  icon={<CreditCard className="w-4 h-4" />}
-                >
-                  Confirm Booking
-                </Button>
+                {user ? (
+                  <Button
+                    variant="primary"
+                    disabled={!guestName || !guestPhone || !guestEmail}
+                    loading={isSubmitting}
+                    onClick={handleBooking}
+                    icon={<CreditCard className="w-4 h-4" />}
+                  >
+                    Confirm Booking
+                  </Button>
+                ) : (
+                  <Link to="/login">
+                    <Button variant="primary" icon={<User className="w-4 h-4" />}>
+                      Login to Book
+                    </Button>
+                  </Link>
+                )}
               </div>
             </motion.div>
           )}

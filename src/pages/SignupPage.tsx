@@ -66,7 +66,7 @@ export function SignupPage() {
               <p className="text-gray-500 dark:text-gray-400 text-sm">Join GlowAI and start your beauty journey</p>
             </div>
 
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} className="space-y-4" autoComplete="off">
               <Input
                 label="Full Name"
                 type="text"
@@ -74,6 +74,7 @@ export function SignupPage() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your name"
                 icon={<User className="w-5 h-5" />}
+                autoComplete="new-password"
                 required
               />
 
@@ -84,6 +85,7 @@ export function SignupPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 icon={<Mail className="w-5 h-5" />}
+                autoComplete="new-password"
                 required
               />
 
@@ -94,6 +96,7 @@ export function SignupPage() {
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="+91 XXXXX XXXXX"
                 icon={<Phone className="w-5 h-5" />}
+                autoComplete="new-password"
                 required
               />
 
@@ -113,6 +116,7 @@ export function SignupPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 }
+                autoComplete="new-password"
                 required
               />
 

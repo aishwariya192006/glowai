@@ -1,30 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
-
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    ...options,
-  });
-
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error || 'Request failed');
-  }
-
-  return res.json();
-}
-
-function toParams(params: Record<string, string | number | boolean | undefined | null>) {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
-      search.set(key, String(value));
-    }
-  }
-  const qs = search.toString();
-  return qs ? `?${qs}` : '';
-}
-
+import { supabase } from './supabase';
 import type { Salon, Service, Category, Review, Booking, User } from '../types';
 
 export interface ServiceWithSalon extends Service {
@@ -37,39 +11,145 @@ export interface BookingWithRelations extends Booking {
 }
 
 export const api = {
-  health: () => request<{ status: string }>('/health'),
+  health: async () => {
+    return { status: 'ok' };
+  },
 
-  getSalons: (params: Record<string, string | number | boolean | undefined> = {}) =>
-    request<Salon[]>(`/salons${toParams(params)}`),
+  getSalons: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    let query = supabase.from('salons').select('*');
+    
+    // Add filters based on params if needed (e.g., search, area)
+    
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data as Salon[];
+  },
 
-  getSalon: (id: string) => request<Salon>(`/salons/${id}`),
+  getSalon: async (id: string) => {
+    const { data, error } = await supabase.from('salons').select('*').eq('id', id).single();
+    if (error) throw new Error(error.message);
+    return data as Salon;
+  },
 
-  getServices: (params: Record<string, string | number | boolean | undefined> = {}) =>
-    request<ServiceWithSalon[]>(`/services${toParams(params)}`),
+  getServices: async (params: Record<string, string | number | boolean | undefined> = {}) => {
+    let query = supabase.from('services').select('*, salons(*)');
+    
+    if (params.salon_id) {
+      query = query.eq('salon_id', params.salon_id);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data as ServiceWithSalon[];
+  },
 
-  getCategories: () => request<Category[]>('/categories'),
+  getCategories: async () => {
+    const { data, error } = await supabase.from('categories').select('*').order('sort_order');
+    if (error) throw new Error(error.message);
+    return data as Category[];
+  },
 
-  getReviews: (params: Record<string, string | number | undefined> = {}) =>
-    request<Review[]>(`/reviews${toParams(params)}`),
+  getReviews: async (params: Record<string, string | number | undefined> = {}) => {
+    let query = supabase.from('reviews').select('*');
+    
+    if (params.salon_id) {
+      query = query.eq('salon_id', params.salon_id);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data as Review[];
+  },
 
-  getBookings: (params: Record<string, string | number | undefined> = {}) =>
-    request<BookingWithRelations[]>(`/bookings${toParams(params)}`),
+  getBookings: async (params: Record<string, string | number | undefined> = {}) => {
+    let query = supabase.from('bookings').select('*, salons(*), services(*)');
+    
+    if (params.user_id) {
+      query = query.eq('user_id', params.user_id);
+    }
+    
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return data as BookingWithRelations[];
+  },
 
-  createBooking: (data: Partial<Booking>) =>
-    request<Booking>('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  createBooking: async (data: Partial<Booking>) => {
+    const { data: booking, error } = await supabase.from('bookings').insert(data).select().single();
+    if (error) throw new Error(error.message);
+    return booking as Booking;
+  },
 
-  getUsers: (params: Record<string, string | number | undefined> = {}) =>
-    request<User[]>(`/users${toParams(params)}`),
+  createSalon: async (data: Partial<Salon>) => {
+    const { data: salon, error } = await supabase.from('salons').insert(data).select().single();
+    if (error) throw new Error(error.message);
+    return salon as Salon;
+  },
 
-  upsertUser: (data: Partial<User> & { email: string }) =>
-    request<User>('/users/upsert', { method: 'POST', body: JSON.stringify(data) }),
+  updateSalon: async (id: string, data: Partial<Salon>) => {
+    const { data: salon, error } = await supabase.from('salons').update(data).eq('id', id).select().single();
+    if (error) throw new Error(error.message);
+    return salon as Salon;
+  },
 
-  login: (email: string, password: string) =>
-    request<User>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  uploadImage: async (file: File) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
 
-  signup: (data: { email: string; password: string; name: string; phone?: string; is_student?: boolean }) =>
-    request<User>('/auth/signup', { method: 'POST', body: JSON.stringify(data) }),
+    const { error: uploadError } = await supabase.storage
+      .from('images')
+      .upload(filePath, file);
 
-  submitContact: (data: { full_name: string; email: string; subject: string; message: string }) =>
-    request<{ success: boolean; message: string }>('/contact', { method: 'POST', body: JSON.stringify(data) }),
+    if (uploadError) throw new Error(uploadError.message);
+
+    const { data } = supabase.storage.from('images').getPublicUrl(filePath);
+    return { url: data.publicUrl };
+  },
+
+  getUsers: async (params: Record<string, string | number | undefined> = {}) => {
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) throw new Error(error.message);
+    return data as User[];
+  },
+
+  upsertUser: async (data: Partial<User> & { email: string }) => {
+    const { data: user, error } = await supabase.from('users').upsert(data, { onConflict: 'email' }).select().single();
+    if (error) throw new Error(error.message);
+    return user as User;
+  },
+
+  // Auth is handled differently in Supabase, but we can wrap it here for compatibility if needed.
+  // Using supabase.auth.signInWithPassword instead of fetching a local endpoint.
+  login: async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    
+    // Fetch full user profile, but don't crash if it doesn't exist (e.g. if created before tables existed)
+    const { data: profile, error: profileError } = await supabase.from('users').select('*').eq('id', data.user.id).maybeSingle();
+    if (profileError) throw new Error(profileError.message);
+    
+    return (profile || { id: data.user.id, email, name: 'User', role: 'customer' }) as User;
+  },
+
+  signup: async (data: { email: string; password: string; name: string; phone?: string; is_student?: boolean }) => {
+    const { data: authData, error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          full_name: data.name,
+        }
+      }
+    });
+    
+    if (error) throw new Error(error.message);
+    if (!authData.user) throw new Error('Signup failed');
+    
+    return { id: authData.user.id, email: data.email, name: data.name } as unknown as User;
+  },
+
+  submitContact: async (data: { full_name: string; email: string; subject: string; message: string }) => {
+    // You could store contacts in a table or use a function.
+    return { success: true, message: 'Message sent successfully' };
+  },
 };

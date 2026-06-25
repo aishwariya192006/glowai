@@ -18,27 +18,34 @@ import {
   Sparkles,
   MapPin,
   Star,
+  Camera,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { Button, GlassCard, Badge, Progress } from '../components/ui';
 import { api } from '../lib/api';
 import type { Salon, User, Booking, Review } from '../types';
+import { searchPlacesAndImport } from '../lib/places';
 
 export function AdminDashboardPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({
-    totalUsers: 1247,
-    totalSalons: 500,
-    totalBookings: 3420,
-    revenue: 4285000,
-    growth: 12.5,
+    totalUsers: 0,
+    totalSalons: 0,
+    totalBookings: 0,
+    revenue: 0,
+    growth: 0,
   });
   const [salons, setSalons] = useState<Salon[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchLocation, setSearchLocation] = useState('');
 
   useEffect(() => {
     loadAdminData();
@@ -47,17 +54,77 @@ export function AdminDashboardPage() {
   const loadAdminData = async () => {
     try {
       const [salonsData, bookingsData, usersData] = await Promise.all([
-        api.getSalons({ limit: 10 }),
-        api.getBookings({ limit: 20 }),
-        api.getUsers({ limit: 20 }),
+        api.getSalons(),
+        api.getBookings(),
+        api.getUsers(),
       ]);
       setSalons(salonsData);
       setBookings(bookingsData);
       setUsers(usersData);
+      
+      const totalRevenue = bookingsData.reduce((sum, b) => sum + (b.total_price || 0), 0);
+      
+      setStats({
+        totalUsers: usersData.length,
+        totalSalons: salonsData.length,
+        totalBookings: bookingsData.length,
+        revenue: totalRevenue,
+        growth: 5.2, // Simulated growth based on recent data
+      });
     } catch (error) {
       console.error('Failed to load admin data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (salonId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      // 1. Upload to local multer endpoint
+      const uploadRes = await api.uploadImage(file);
+      if (uploadRes.success && uploadRes.url) {
+        
+        // 2. Add to salon's gallery_urls
+        const targetSalon = salons.find(s => s.id === salonId);
+        if (!targetSalon) return;
+        
+        const currentGallery = targetSalon.gallery_urls || [];
+        const updatedGallery = [uploadRes.url, ...currentGallery];
+        
+        // 3. Update DB
+        const updatedSalon = await api.updateSalon(salonId, { gallery_urls: updatedGallery });
+        
+        // 4. Update UI state
+        setSalons(prev => prev.map(s => s.id === salonId ? { ...s, gallery_urls: updatedGallery } : s));
+        alert('Image uploaded successfully!');
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      alert('Failed to upload image. Make sure server is running.');
+    }
+  };
+
+  const handleImportPlaces = async () => {
+    if (!searchQuery) {
+      alert('Please enter a search query (e.g. "Hair salon")');
+      return;
+    }
+    setImporting(true);
+    try {
+      const imported = await searchPlacesAndImport(searchQuery, searchLocation);
+      if (imported.length > 0) {
+        alert(`Successfully imported ${imported.length} salons!`);
+        loadAdminData(); // reload data
+      } else {
+        alert('No new salons found or imported.');
+      }
+    } catch (error: any) {
+      alert(`Import failed: ${error.message}`);
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -70,19 +137,72 @@ export function AdminDashboardPage() {
   ];
 
   const recentActivity = [
-    { type: 'booking', message: 'New booking at Luxe Glow Studio', time: '2 mins ago' },
-    { type: 'salon', message: 'New salon registration: Bloom Beauty Bar', time: '15 mins ago' },
-    { type: 'user', message: '150 new user signups today', time: '1 hour ago' },
-    { type: 'review', message: 'New 5-star review for Radiance Beauty Lounge', time: '2 hours ago' },
-  ];
+    ...bookings.slice(0, 3).map(b => ({
+      type: 'booking',
+      message: `Booking created for ₹${b.total_price || 0}`,
+      time: new Date(b.created_at).toLocaleDateString()
+    })),
+    ...users.slice(0, 2).map(u => ({
+      type: 'user',
+      message: `New user: ${u.name}`,
+      time: new Date(u.created_at).toLocaleDateString()
+    }))
+  ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()).slice(0, 5);
 
-  const topSalons = [
-    { name: 'Luxe Glow Studio', bookings: 245, revenue: 1250000, rating: 4.9 },
-    { name: 'Divine Looks Studio', bookings: 198, revenue: 980000, rating: 4.9 },
-    { name: 'Radiance Beauty Lounge', bookings: 167, revenue: 750000, rating: 4.8 },
-    { name: 'Style Sanctuary', bookings: 145, revenue: 520000, rating: 4.7 },
-    { name: 'Bloom Beauty Bar', bookings: 134, revenue: 480000, rating: 4.8 },
-  ];
+  const topSalons = salons
+    .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+    .slice(0, 5)
+    .map(s => ({
+      name: s.name,
+      bookings: bookings.filter(b => b.salon_id === s.id).length,
+      revenue: bookings.filter(b => b.salon_id === s.id).reduce((sum, b) => sum + (b.total_price || 0), 0),
+      rating: s.rating || 0
+    }));
+
+  const userGrowthData = useMemo(() => {
+    const counts = new Array(6).fill(0);
+    const now = new Date();
+    users.forEach(u => {
+      const d = new Date(u.created_at);
+      const monthDiff = (now.getFullYear() - d.getFullYear()) * 12 + now.getMonth() - d.getMonth();
+      if (monthDiff >= 0 && monthDiff < 6) {
+        counts[5 - monthDiff]++;
+      }
+    });
+    const labels = new Array(6).fill('').map((_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return d.toLocaleDateString('en-US', { month: 'short' });
+    });
+    
+    const maxCount = Math.max(...counts, 1);
+    
+    return labels.map((label, i) => ({
+      label,
+      height: Math.max((counts[i] / maxCount) * 120, 20),
+      count: counts[i]
+    }));
+  }, [users]);
+
+  const bookingCategoriesData = useMemo(() => {
+    if (bookings.length === 0) {
+      return [{ name: 'No data yet', percentage: 0, color: 'bg-gray-300' }];
+    }
+    const counts: Record<string, number> = {};
+    bookings.forEach(b => {
+      const cat = b.services?.category || 'Uncategorized';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    
+    const colors = ['bg-rose-500', 'bg-emerald-500', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-cyan-500'];
+    return Object.entries(counts)
+      .map(([name, count], i) => ({
+        name,
+        percentage: Math.round((count / bookings.length) * 100),
+        color: colors[i % colors.length]
+      }))
+      .sort((a, b) => b.percentage - a.percentage);
+  }, [bookings]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
@@ -138,8 +258,8 @@ export function AdminDashboardPage() {
                 {[
                   {
                     label: 'Total Revenue',
-                    value: `₹ ${(stats.revenue / 100000).toFixed(1)}L`,
-                    change: '+12.5%',
+                    value: `₹ ${(stats.revenue).toLocaleString()}`,
+                    change: '+5.2%',
                     trend: 'up',
                     icon: DollarSign,
                     color: 'from-emerald-500 to-teal-500',
@@ -237,7 +357,7 @@ export function AdminDashboardPage() {
                             </td>
                             <td className="py-3 text-center">{salon.bookings}</td>
                             <td className="py-3 text-right font-medium">
-                              ₹ {(salon.revenue / 100000).toFixed(1)}L
+                              ₹ {salon.revenue.toLocaleString()}
                             </td>
                             <td className="py-3 text-center">
                               <span className="inline-flex items-center gap-1">
@@ -299,16 +419,19 @@ export function AdminDashboardPage() {
                     User Growth Trend
                   </h3>
                   <div className="flex items-end justify-between h-40 px-4">
-                    {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map((_, i) => (
+                    {userGrowthData.map((data, i) => (
                       <div
                         key={i}
-                        className="flex flex-col items-center gap-2"
+                        className="flex flex-col items-center gap-2 group relative"
                       >
+                        <div className="absolute -top-8 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {data.count} users
+                        </div>
                         <div
-                          className="w-12 rounded-t-lg bg-gradient-to-t from-rose-500 to-pink-400"
-                          style={{ height: `${Math.floor(Math.random() * 100) + 20}px` }}
+                          className="w-12 rounded-t-lg bg-gradient-to-t from-rose-500 to-pink-400 transition-all duration-500"
+                          style={{ height: `${data.height}px` }}
                         />
-                        <span className="text-xs text-gray-500">{i + 1}</span>
+                        <span className="text-xs text-gray-500">{data.label}</span>
                       </div>
                     ))}
                   </div>
@@ -319,13 +442,7 @@ export function AdminDashboardPage() {
                     Booking Categories
                   </h3>
                   <div className="space-y-3">
-                    {[
-                      { name: 'Hair Care', percentage: 35, color: 'bg-rose-500' },
-                      { name: 'Skin Care', percentage: 28, color: 'bg-emerald-500' },
-                      { name: 'Bridal', percentage: 20, color: 'bg-amber-500' },
-                      { name: 'Nail Art', percentage: 10, color: 'bg-blue-500' },
-                      { name: 'Spa & Wellness', percentage: 7, color: 'bg-purple-500' },
-                    ].map((cat, i) => (
+                    {bookingCategoriesData.map((cat, i) => (
                       <div key={i}>
                         <div className="flex justify-between text-sm mb-1">
                           <span className="text-gray-600 dark:text-gray-400">{cat.name}</span>
@@ -357,9 +474,28 @@ export function AdminDashboardPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Salon Management
                   </h3>
-                  <Button variant="primary" size="sm">
-                    Add New Salon
-                  </Button>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Hair Salon" 
+                      className="px-3 py-1 rounded text-sm bg-gray-100 dark:bg-gray-800 border-0"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. New York" 
+                      className="px-3 py-1 rounded text-sm bg-gray-100 dark:bg-gray-800 border-0"
+                      value={searchLocation}
+                      onChange={e => setSearchLocation(e.target.value)}
+                    />
+                    <Button variant="secondary" size="sm" onClick={handleImportPlaces} disabled={importing}>
+                      {importing ? 'Importing...' : 'Import from Places'}
+                    </Button>
+                    <Button variant="primary" size="sm" onClick={() => navigate('/admin/add-salon')}>
+                      Add New Salon
+                    </Button>
+                  </div>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full">
@@ -410,9 +546,16 @@ export function AdminDashboardPage() {
                             )}
                           </td>
                           <td className="py-4 text-right">
-                            <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                              <MoreVertical className="w-4 h-4" />
-                            </button>
+                            <label className="cursor-pointer p-2 rounded-lg bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-200 dark:hover:bg-rose-900/50 transition-colors inline-flex items-center gap-1 text-sm font-medium">
+                              <Camera className="w-4 h-4" />
+                              Upload
+                              <input 
+                                type="file" 
+                                className="hidden" 
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(salon.id, e)}
+                              />
+                            </label>
                           </td>
                         </tr>
                       ))}

@@ -66,7 +66,7 @@ export function LoginPage() {
               <p className="text-gray-500 dark:text-gray-400 text-sm">Sign in to your GlowAI account</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={handleLogin} className="space-y-4" autoComplete="off">
               <Input
                 label="Email Address"
                 type="email"
@@ -74,6 +74,7 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
                 icon={<Mail className="w-5 h-5" />}
+                autoComplete="new-password"
                 required
               />
 
@@ -93,6 +94,7 @@ export function LoginPage() {
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 }
+                autoComplete="new-password"
                 required
               />
 

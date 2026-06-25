@@ -16,12 +16,12 @@ import { Button, GlassCard, Badge, Input } from '../components/ui';
 import { useToast } from '../context/ToastContext';
 
 const jobRoles = [
-  { role: 'Software Engineer', emoji: '💻', style: 'Clean, professional look' },
-  { role: 'Marketing Manager', emoji: '📊', style: 'Creative yet polished' },
-  { role: 'Finance Analyst', emoji: '📈', style: 'Conservative and neat' },
-  { role: 'Designer', emoji: '🎨', style: 'Expressive and modern' },
-  { role: 'Teacher', emoji: '📚', style: 'Approachable and well-groomed' },
-  { role: 'Healthcare', emoji: '🏥', style: 'Clean and professional' },
+  { role: 'Hair Stylist', emoji: '✂️', style: 'Trendy, well-groomed, expressive hair' },
+  { role: 'Makeup Artist', emoji: '💄', style: 'Flawless makeup, stylish and modern' },
+  { role: 'Nail Technician', emoji: '💅', style: 'Neat, detailed, immaculate hands' },
+  { role: 'Salon Manager', emoji: '📋', style: 'Professional, polished, approachable' },
+  { role: 'Esthetician', emoji: '💆‍♀️', style: 'Clean, glowing skin, minimalistic' },
+  { role: 'Massage Therapist', emoji: '🧘‍♀️', style: 'Comfortable, neat, hygienic' },
 ];
 
 export function InterviewPlannerPage() {
@@ -46,27 +46,27 @@ export function InterviewPlannerPage() {
     await new Promise((resolve) => setTimeout(resolve, 2500));
 
     const grooming = [
-      { category: 'Hair', task: 'Professional haircut & styling', salon: 'Luxe Glow Studio', price: 1200 },
-      { category: 'Face', task: 'Express facial / cleanup', salon: 'Radiance Beauty Lounge', price: 899 },
-      { category: 'Grooming', task: 'Eyebrow shaping & grooming', salon: 'Bloom Beauty Bar', price: 400 },
+      { category: 'Hair', task: 'Fresh trim & professional styling', salon: 'Luxe Glow Studio', price: 1200 },
+      { category: 'Face', task: 'Skin analysis & prep facial', salon: 'Radiance Beauty Lounge', price: 899 },
+      { category: 'Nails', task: 'Clean, neutral manicure', salon: 'Bloom Beauty Bar', price: 400 },
     ];
 
     const hairstyles = [
-      { name: 'Sleek Professional', description: 'Clean, polished look for corporate interviews', image: 'https://images.pexels.com/photos/1522334/pexels-photo-1522334.jpeg' },
-      { name: 'Natural Confidence', description: 'Professional yet authentic styling', image: 'https://images.pexels.com/photos/3997992/pexels-photo-3997992.jpeg' },
+      { name: 'Polished & Professional', description: 'Showcase your skills with a clean, expert style', image: 'https://images.unsplash.com/photo-1605980776566-0486c3ac7617?auto=format&fit=crop&q=80&w=800&h=600&crop=faces,top' },
+      { name: 'Creative Flair', description: 'A trendy look that demonstrates your personal style', image: 'https://images.unsplash.com/photo-1519699047748-de8e457a634e?auto=format&fit=crop&q=80&w=800&h=600&crop=faces,top' },
     ];
 
     const dress = {
-      type: 'Professional Business Wear',
-      items: ['Tailored blazer', 'Pressed formal shirt', 'Matching pants/skirt', 'Polished shoes'],
-      tips: 'Choose solid, subtle colors. Avoid distracting patterns. Ensure comfortable, well-fitted attire.',
+      type: 'Salon Professional Wear',
+      items: ['Clean, modern black attire (industry standard)', 'Comfortable closed-toe shoes', 'Minimal jewelry', 'Breathable fabrics'],
+      tips: 'Many salons prefer all-black attire for interviews to show you understand industry standards. Ensure clothes are spotless and hair/makeup is your best work.',
     };
 
     const timeline = [
-      '3 days before: Get haircut',
-      '1 day before: Express facial & grooming',
-      'Morning of: Clean, moisturize, style hair',
-      '1 hour before: Final checks, confident posture',
+      '3 days before: Get your own hair/nails done',
+      '1 day before: Prep your portfolio/tools',
+      'Morning of: Execute your best personal grooming',
+      '1 hour before: Final check of attire and tools',
     ];
 
     setResult({ grooming, hairstyles, dress, timeline });

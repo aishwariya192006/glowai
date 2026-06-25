@@ -32,8 +32,17 @@ import {
   SalonHeatmapPage,
   VirtualStylePage,
   OAuthCallbackPage,
+  AddSalonPage,
+  PricingPage,
+  SuccessStoriesPage,
+  PartnerResourcesPage,
+  CareersPage,
+  JobDetailsPage,
+  LeadershipPage,
+  BlogPage,
+  BlogPostPage,
 } from './pages';
-
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { GlobalBackground } from './components/layout/GlobalBackground';
 
 function AppContent() {
@@ -54,8 +63,18 @@ function AppContent() {
         <Route path="/salon/:id" element={<SalonDetailPage />} />
         <Route path="/booking/:salonId" element={<BookingPage />} />
         <Route path="/booking-success" element={<BookingSuccessPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/admin" element={<AdminDashboardPage />} />
+        
+        {/* Protected Customer Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['customer', 'salon_owner']} />}>
+          <Route path="/dashboard" element={<DashboardPage />} />
+        </Route>
+
+        {/* Protected Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+          <Route path="/admin" element={<AdminDashboardPage />} />
+          <Route path="/admin/add-salon" element={<AddSalonPage />} />
+        </Route>
+
         <Route path="/ai-features" element={<AIFeaturesPage />} />
         <Route path="/glow-score" element={<GlowScorePage />} />
         <Route path="/bridal-planner" element={<BridalPlannerPage />} />
@@ -70,6 +89,14 @@ function AppContent() {
         <Route path="/beauty-journey" element={<BeautyJourneyPage />} />
         <Route path="/salon-heatmap" element={<SalonHeatmapPage />} />
         <Route path="/virtual-style" element={<VirtualStylePage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/success-stories" element={<SuccessStoriesPage />} />
+        <Route path="/partner-resources" element={<PartnerResourcesPage />} />
+        <Route path="/careers" element={<CareersPage />} />
+        <Route path="/careers/:id" element={<JobDetailsPage />} />
+        <Route path="/leadership" element={<LeadershipPage />} />
+        <Route path="/blog" element={<BlogPage />} />
+        <Route path="/blog/:id" element={<BlogPostPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/oauth-callback" element={<OAuthCallbackPage />} />

@@ -20,7 +20,7 @@ const footerLinks = {
     { label: 'About Us', href: '/about' },
     { label: 'Careers', href: '/careers' },
     { label: 'Leadership', href: '/leadership' },
-    { label: 'Women Initiative', href: '/women-initiative' },
+    { label: 'Women Initiative', href: '/women-owned' },
     { label: 'Contact', href: '/contact' },
   ],
   legal: [
